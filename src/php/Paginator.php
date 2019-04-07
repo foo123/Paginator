@@ -18,11 +18,11 @@ class Paginator
     protected $numPages;
     protected $itemsPerPage;
     protected $currentPage;
-    protected $pattern;
+    protected $urlPattern;
     protected $maxPagesToShow = 10;
     protected $placeholder = '(:page)';
-    protected $previousText = 'Previous';
-    protected $nextText = 'Next';
+    protected $previousText = '&laquo; Previous';
+    protected $nextText = 'Next &raquo;';
 
     public function __construct( $totalItems, $itemsPerPage, $currentPage, $urlPattern = '', $placeholder = null )
     {
@@ -288,19 +288,19 @@ class Paginator
 
         $html = '<ul class="pagination">';
         if ($this->getPrevUrl()) {
-            $html .= '<li><a href="' . htmlspecialchars($this->getPrevUrl()) . '">&laquo; '. $this->previousText .'</a></li>';
+            $html .= '<li class="page-previous"><a href="' . htmlspecialchars($this->getPrevUrl()) . '">'. $this->previousText .'</a></li>';
         }
 
         foreach ($this->getPages() as $page) {
             if ($page['url']) {
-                $html .= '<li' . ($page['isCurrent'] ? ' class="active"' : '') . '><a href="' . htmlspecialchars($page['url']) . '">' . htmlspecialchars($page['num']) . '</a></li>';
+                $html .= '<li class="page-item' . (1==$page['num'] ? ' first' : '') . ($this->numPages==$page['num'] ? ' last' : '') . ($page['isCurrent'] ? ' active' : '') . '"><a href="' . htmlspecialchars($page['url']) . '">' . htmlspecialchars($page['num']) . '</a></li>';
             } else {
-                $html .= '<li class="disabled"><span>' . htmlspecialchars($page['num']) . '</span></li>';
+                $html .= '<li class="page-item disabled"><span>' . htmlspecialchars($page['num']) . '</span></li>';
             }
         }
 
         if ($this->getNextUrl()) {
-            $html .= '<li><a href="' . htmlspecialchars($this->getNextUrl()) . '">'. $this->nextText .' &raquo;</a></li>';
+            $html .= '<li class="page-next"><a href="' . htmlspecialchars($this->getNextUrl()) . '">'. $this->nextText .'</a></li>';
         }
         $html .= '</ul>';
 

@@ -23,9 +23,19 @@ else if ( !(name in root) ) /* Browser/WebWorker/.. */
     /* module factory */        function ModuleFactory__Paginator( undef ){
 "use strict";
 
+var html_esc_re = /[&<>'"]/g;
 function htmlspecialchars( s )
 {
-    return String(s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;');
+    return String(s).replace(html_esc_re, function( m ){
+        switch(m)
+        {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            default: return m;
+        }
+    });
 }
 
 function Paginator( totalItems, itemsPerPage, currentPage, urlPattern, placeholder )
@@ -47,11 +57,11 @@ Paginator.prototype = {
     numPages: 0,
     itemsPerPage: 0,
     currentPage: 0,
-    pattern: '',
+    urlPattern: '',
     maxPagesToShow: 10,
     placeholder: '(:page)',
-    previousText: 'Previous',
-    nextText: 'Next',
+    previousText: '&laquo; Previous',
+    nextText: 'Next &raquo;',
 
     computeNumPages: function( ) {
         this.numPages = (0 === this.itemsPerPage ? 0 : Math.ceil(this.totalItems/this.itemsPerPage));
@@ -277,20 +287,21 @@ Paginator.prototype = {
 
         var html = '<ul class="pagination">';
         if (this.getPrevUrl()) {
-            html += '<li><a href="' + htmlspecialchars(this.getPrevUrl()) + '">&laquo; '+ this.previousText +'</a></li>';
+            html += '<li class="page-previous"><a href="' + htmlspecialchars(this.getPrevUrl()) + '">'+ this.previousText +'</a></li>';
         }
 
-        var pages = this.getPages(), i, l = pages.length;
+        var pages = this.getPages(), i, l = pages.length, page;
         for (i=0; i<l; i++) {
-            if (pages[i].url) {
-                html += '<li' + (pages[i].isCurrent ? ' class="active"' : '') + '><a href="' + htmlspecialchars(pages[i].url) + '">' + htmlspecialchars(pages[i].num) + '</a></li>';
+            page = pages[i];
+            if (page.url) {
+                html += '<li class="page-item' + (1==page.num ? ' first' : '') + (this.numPages==page.num ? ' last' : '') + (page.isCurrent ? ' active' : '') + '"><a href="' + htmlspecialchars(page.url) + '">' + htmlspecialchars(page.num) + '</a></li>';
             } else {
-                html += '<li class="disabled"><span>' + htmlspecialchars(pages[i].num) + '</span></li>';
+                html += '<li class="page-item disabled"><span>' + htmlspecialchars(page.num) + '</span></li>';
             }
         }
 
         if (this.getNextUrl()) {
-            html += '<li><a href="' + htmlspecialchars(this.getNextUrl()) + '">'+ this.nextText +' &raquo;</a></li>';
+            html += '<li class="page-next"><a href="' + htmlspecialchars(this.getNextUrl()) + '">'+ this.nextText +'</a></li>';
         }
         html += '</ul>';
 
