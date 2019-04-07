@@ -12,8 +12,6 @@ if ( ('undefined'!==typeof Components)&&('object'===typeof Components.classes)&&
     (root.$deps = root.$deps||{}) && (root.EXPORTED_SYMBOLS = [name]) && (root[name] = root.$deps[name] = factory.call(root));
 else if ( ('object'===typeof module)&&module.exports ) /* CommonJS */
     (module.$deps = module.$deps||{}) && (module.exports = module.$deps[name] = factory.call(root));
-else if ( ('undefined'!==typeof System)&&('function'===typeof System.register)&&('function'===typeof System['import']) ) /* ES6 module */
-    System.register(name,[],function($__export){$__export(name, factory.call(root));});
 else if ( ('function'===typeof define)&&define.amd&&('function'===typeof require)&&('function'===typeof require.specified)&&require.specified(name) /*&& !require.defined(name)*/ ) /* AMD */
     define(name,['module'],function(module){factory.moduleUri = module.uri; return factory.call(root);});
 else if ( !(name in root) ) /* Browser/WebWorker/.. */
@@ -38,149 +36,197 @@ function htmlspecialchars( s )
     });
 }
 
-function Paginator( totalItems, itemsPerPage, currentPage, urlPattern, placeholder )
+function Paginator( totalItems, itemsPerPage, currentPage )
 {
-    this.totalItems = +totalItems;
-    this.itemsPerPage = +itemsPerPage;
-    this.currentPage = +currentPage;
-    this.urlPattern = String(urlPattern||'');
-    if ( null != placeholder )
-        this.placeholder = String(placeholder);
+    var self = this;
+    self._maxPagesToShow = 10;
+    self._placeholder = '(:page)';
+    self._urlPattern = '?page=' + self._placeholder;
+    self._previousText = '&laquo; Previous';
+    self._nextText = 'Next &raquo;';
+    self._ellipsis = '...';
+    self._numPages = 0;
 
-    this.computeNumPages();
+    self._totalItems = parseInt(totalItems||0);
+    self._itemsPerPage = parseInt(itemsPerPage||0);
+    self._currentPage = parseInt(currentPage||1);
+
+    self.computeNumPages();
 }
 Paginator.VERSION = '1.0.0';
 Paginator.prototype = {
     constructor: Paginator,
 
-    totalItems: 0,
-    numPages: 0,
-    itemsPerPage: 0,
-    currentPage: 0,
-    urlPattern: '',
-    maxPagesToShow: 10,
-    placeholder: '(:page)',
-    previousText: '&laquo; Previous',
-    nextText: 'Next &raquo;',
+    _totalItems: null,
+    _itemsPerPage: null,
+    _currentPage: null,
+    _numPages: null,
+    _maxPagesToShow: null,
+    _placeholder: null,
+    _urlPattern: null,
+    _previousText: null,
+    _nextText: null,
+    _ellipsis: null,
 
     computeNumPages: function( ) {
-        this.numPages = (0 === this.itemsPerPage ? 0 : Math.ceil(this.totalItems/this.itemsPerPage));
-        return this;
+        var self = this;
+        self._numPages = 0 >= self._itemsPerPage || 0 >= self._totalItems ? 0 : Math.ceil(self._totalItems/self._itemsPerPage);
+        return self;
     },
 
-    setMaxPagesToShow: function( maxPagesToShow ) {
-        if (maxPagesToShow < 3) {
-            throw new TypeError('maxPagesToShow cannot be less than 3.');
+    numPages: function( ) {
+        return this._numPages;
+    },
+
+    totalItems: function( totalItems ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            self._totalItems = parseInt(totalItems);
+            return self.computeNumPages();
         }
-        this.maxPagesToShow = +maxPagesToShow;
-        return this;
-    },
-
-    getMaxPagesToShow: function( ) {
-        return this.maxPagesToShow;
-    },
-
-    setCurrentPage: function( currentPage ) {
-        this.currentPage = +currentPage;
-        return this;
-    },
-
-    getCurrentPage: function( ) {
-        return this.currentPage;
-    },
-
-    setItemsPerPage: function( itemsPerPage ) {
-        this.itemsPerPage = +itemsPerPage;
-        return this.computeNumPages();
-    },
-
-    getItemsPerPage: function( ) {
-        return this.itemsPerPage;
-    },
-
-    setTotalItems: function( totalItems ) {
-        this.totalItems = +totalItems;
-        return this.computeNumPages();
-    },
-
-    getTotalItems: function( ) {
-        return this.totalItems;
-    },
-
-    getNumPages: function( ) {
-        return this.numPages;
-    },
-
-    setUrlPattern: function( urlPattern ) {
-        this.urlPattern = String(urlPattern);
-        return this;
-    },
-
-    getUrlPattern: function( ) {
-        return this.urlPattern;
-    },
-
-    setPlaceholder: function( placeholder ) {
-        this.placeholder = String(placeholder);
-        return this;
-    },
-
-    getPlaceholder: function( ) {
-        return this.placeholder;
-    },
-
-    getPageUrl: function( pageNum ){
-        return this.urlPattern.split(this.placeholder).join(pageNum);
-    },
-
-    getNextPage: function( ) {
-        if (this.currentPage < this.numPages) {
-            return this.currentPage + 1;
+        else
+        {
+            return self._totalItems;
         }
-
-        return null;
     },
 
-    getPrevPage: function( ) {
-        if (this.currentPage > 1) {
-            return this.currentPage - 1;
+    itemsPerPage: function( itemsPerPage ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            self._itemsPerPage = parseInt(itemsPerPage);
+            return self.computeNumPages();
         }
-
-        return null;
-    },
-
-    getNextUrl: function( ) {
-        if (!this.getNextPage()) {
-            return null;
+        else
+        {
+            return self._itemsPerPage;
         }
-
-        return this.getPageUrl(this.getNextPage());
     },
 
-    getPrevUrl: function( ) {
-        if (!this.getPrevPage()) {
-            return null;
+    currentPage: function( currentPage ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            self._currentPage = parseInt(currentPage);
+            return self;
         }
-
-        return this.getPageUrl(this.getPrevPage());
+        else
+        {
+            return self._currentPage;
+        }
     },
 
-    setPreviousText: function( text ) {
-        this.previousText = String(text);
-        return this;
+    maxPagesToShow: function( maxPagesToShow ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            maxPagesToShow = parseInt(maxPagesToShow);
+            if ( maxPagesToShow < 3 ) throw new TypeError('maxPagesToShow cannot be less than 3!');
+            self._maxPagesToShow = maxPagesToShow;
+            return self;
+        }
+        else
+        {
+            return self._maxPagesToShow;
+        }
     },
 
-    getPreviousText: function( ) {
-        return this.previousText;
+    urlPattern: function( urlPattern ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            self._urlPattern = String(urlPattern);
+            return self;
+        }
+        else
+        {
+            return self._urlPattern;
+        }
     },
 
-    setNextText: function( text ) {
-        this.nextText = String(text);
-        return this;
+    placeholder: function( placeholder ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            self._placeholder = String(placeholder);
+            return self;
+        }
+        else
+        {
+            return self._placeholder;
+        }
     },
 
-    getNextText: function( ) {
-        return this.nextText;
+    previousText: function( text ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            self._previousText = String(text);
+            return self;
+        }
+        else
+        {
+            return self._previousText;
+        }
+    },
+
+    nextText: function( text ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            self._nextText = String(text);
+            return self;
+        }
+        else
+        {
+            return self._nextText;
+        }
+    },
+
+    ellipsis: function( text ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            self._ellipsis = String(text);
+            return self;
+        }
+        else
+        {
+            return self._ellipsis;
+        }
+    },
+
+    pageUrl: function( pageNum ){
+        return this._urlPattern.split(this._placeholder).join(String(pageNum));
+    },
+
+    prevPage: function( ) {
+        return this._currentPage > 1 ? this._currentPage-1 : null;
+    },
+
+    nextPage: function( ) {
+        return this._currentPage < this._numPages ? this._currentPage+1 : null;
+    },
+
+    prevUrl: function( ) {
+        return this.prevPage( ) ? this.pageUrl( this.prevPage( ) ) : null;
+    },
+
+    nextUrl: function( ) {
+        return this.nextPage( ) ? this.pageUrl( this.nextPage( ) ) : null;
+    },
+
+    currentPageFirstItem: function( ) {
+        var first = (this._currentPage - 1) * this._itemsPerPage + 1;
+        return first > this._totalItems ? null : first;
+    },
+
+    currentPageLastItem: function( ) {
+        var first = this.currentPageFirstItem(), last;
+        if ( null == first ) return null;
+        last = first + this._itemsPerPage - 1;
+        return last > this._totalItems ? this._totalItems : last;
     },
 
     /**
@@ -188,121 +234,116 @@ Paginator.prototype = {
      *
      * Example:
      * array(
-     *     array ('num' => 1,     'url' => '/example/page/1',  'isCurrent' => false),
-     *     array ('num' => '...', 'url' => NULL,               'isCurrent' => false),
-     *     array ('num' => 3,     'url' => '/example/page/3',  'isCurrent' => false),
-     *     array ('num' => 4,     'url' => '/example/page/4',  'isCurrent' => true ),
-     *     array ('num' => 5,     'url' => '/example/page/5',  'isCurrent' => false),
-     *     array ('num' => '...', 'url' => NULL,               'isCurrent' => false),
-     *     array ('num' => 10,    'url' => '/example/page/10', 'isCurrent' => false),
+     *     object ('num' : 1,     'url' : '/example/page/1',  'isCurrent' : false),
+     *     object ('num' : '...', 'url' : NULL,               'isCurrent' : false),
+     *     object ('num' : 3,     'url' : '/example/page/3',  'isCurrent' : false),
+     *     object ('num' : 4,     'url' : '/example/page/4',  'isCurrent' : true ),
+     *     object ('num' : 5,     'url' : '/example/page/5',  'isCurrent' : false),
+     *     object ('num' : '...', 'url' : NULL,               'isCurrent' : false),
+     *     object ('num' : 10,    'url' : '/example/page/10', 'isCurrent' : false),
      * )
      *
      * @return array
      */
-    getPages: function( ) {
-        var pages = [];
+    pages: function( ) {
+        var self = this,
+            i, l, numAdjacents, slidingStart, slidingEnd,
+            pages = []
+        ;
 
-        if (this.numPages <= 1) {
-            return [];
+        if ( 1 >= self._numPages ) return pages;
+
+        if ( self._numPages <= self._maxPagesToShow )
+        {
+            for (i=1,l=self._numPages; i<=l; i++)
+                pages.push(self.createPage(i, i==self._currentPage));
         }
-
-        if (this.numPages <= this.maxPagesToShow) {
-            for (var i = 1; i <= this.numPages; i++) {
-                pages.push(this.createPage(i, i === this.currentPage));
-            }
-        } else {
-
+        else
+        {
             // Determine the sliding range, centered around the current page.
-            var numAdjacents = Math.floor((this.maxPagesToShow - 3) / 2),
-                slidingStart, slidingEnd;
+            numAdjacents = Math.floor((self._maxPagesToShow - 3) / 2);
 
-            if (this.currentPage + numAdjacents > this.numPages) {
-                slidingStart = this.numPages - this.maxPagesToShow + 2;
-            } else {
-                slidingStart = this.currentPage - numAdjacents;
+            if ( self._currentPage + numAdjacents > self._numPages )
+            {
+                slidingStart = self._numPages - self._maxPagesToShow + 2;
             }
-            if (slidingStart < 2) slidingStart = 2;
+            else
+            {
+                slidingStart = self._currentPage - numAdjacents;
+            }
+            if ( slidingStart < 2 ) slidingStart = 2;
 
-            slidingEnd = slidingStart + this.maxPagesToShow - 3;
-            if (slidingEnd >= this.numPages) slidingEnd = this.numPages - 1;
+            slidingEnd = slidingStart + self._maxPagesToShow - 3;
+            if ( slidingEnd >= self._numPages ) slidingEnd = self._numPages - 1;
 
             // Build the list of pages.
-            pages.push(this.createPage(1, this.currentPage === 1));
-            if (slidingStart > 2) {
-                pages.push(this.createPage(null));
-            }
-            for (var i = slidingStart; i <= slidingEnd; i++) {
-                pages.push(this.createPage(i, i === this.currentPage));
-            }
-            if (slidingEnd < this.numPages - 1) {
-                pages.push(this.createPage(null));
-            }
-            pages.push(this.createPage(this.numPages, this.currentPage === this.numPages));
-        }
 
+            // first
+            pages.push(self.createPage(1, 1==self._currentPage));
+
+            // ellipsis ..
+            if ( slidingStart > 2 ) pages.push(self.createPage(null));
+
+            // shown pages
+            for (i=slidingStart; i<=slidingEnd; i++)
+                pages.push(self.createPage(i, i==self._currentPage));
+
+            // ellipsis ..
+            if ( slidingEnd < self._numPages - 1 ) pages.push(self.createPage(null));
+
+            // last
+            pages.push(self.createPage(self._numPages, self._numPages==self._currentPage));
+        }
 
         return pages;
     },
 
     createPage: function( pageNum, isCurrent ) {
         return null == pageNum ? {
-            'num' : '...',
+            'num' : this._ellipsis,
             'url' : null,
             'isCurrent' : false
         } : {
             'num' : pageNum,
-            'url' : this.getPageUrl(pageNum),
+            'url' : this.pageUrl(pageNum),
             'isCurrent' : !!isCurrent
         };
     },
 
-    getCurrentPageFirstItem: function( ) {
-        var first = (this.currentPage - 1) * this.itemsPerPage + 1;
-
-        if (first > this.totalItems) {
-            return null;
-        }
-
-        return first;
-    },
-
-    getCurrentPageLastItem: function( ) {
-        var first = this.getCurrentPageFirstItem();
-        if (first === null) {
-            return null;
-        }
-
-        var last = first + this.itemsPerPage - 1;
-        if (last > this.totalItems) {
-            return this.totalItems;
-        }
-
-        return last;
-    },
-
     renderer: function( ) {
-        if (this.numPages <= 1) {
-            return '';
+        var self = this, html, pages, i, l, page;
+
+        if ( 1 >= self._numPages ) return '';
+
+        // possibly should be wrapped around <nav></nav> element when used
+        html = '<ul class="pagination">';
+
+        if ( self.prevUrl( ) )
+        {
+            html += '<li class="page-previous"><a href="' + htmlspecialchars(self.prevUrl( )) + '">'+ self._previousText +'</a></li>';
         }
 
-        var html = '<ul class="pagination">';
-        if (this.getPrevUrl()) {
-            html += '<li class="page-previous"><a href="' + htmlspecialchars(this.getPrevUrl()) + '">'+ this.previousText +'</a></li>';
-        }
-
-        var pages = this.getPages(), i, l = pages.length, page;
-        for (i=0; i<l; i++) {
+        for (pages=self.pages(),i=0,l=pages.length; i<l; i++)
+        {
             page = pages[i];
-            if (page.url) {
-                html += '<li class="page-item' + (1==page.num ? ' first' : '') + (this.numPages==page.num ? ' last' : '') + (page.isCurrent ? ' active' : '') + '"><a href="' + htmlspecialchars(page.url) + '">' + htmlspecialchars(page.num) + '</a></li>';
-            } else {
-                html += '<li class="page-item disabled"><span>' + htmlspecialchars(page.num) + '</span></li>';
+            if ( page.url )
+            {
+                // actual page with page number
+                html += '<li class="page-item' + (1==page.num ? ' first' : '') + (self._numPages==page.num ? ' last' : '') + (page.isCurrent ? ' active' : '') + '"><a href="' + htmlspecialchars(page.url) + '">' + String(page.num) + '</a></li>';
+            }
+            else
+            {
+                // ellipsis, more
+                html += '<li class="page-item disabled"><span>' + String(page.num) + '</span></li>';
             }
         }
 
-        if (this.getNextUrl()) {
-            html += '<li class="page-next"><a href="' + htmlspecialchars(this.getNextUrl()) + '">'+ this.nextText +'</a></li>';
+        // next link
+        if ( self.nextUrl( ) )
+        {
+            html += '<li class="page-next"><a href="' + htmlspecialchars(self.nextUrl( )) + '">'+ self._nextText +'</a></li>';
         }
+
         html += '</ul>';
 
         return html;

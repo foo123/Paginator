@@ -10,7 +10,8 @@
 import math, re
 
 html_esc_re = re.compile(r'[&<>\'"]')
-def htmlspecialchars_replace( m ):
+def htmlspecialchars_replace( match ):
+    m = match.group(0)
     if m == '&': return '&amp;'
     elif m == '<': return '&lt;'
     elif m == '>': return '&gt;'
@@ -19,227 +20,221 @@ def htmlspecialchars_replace( m ):
 
 def htmlspecialchars( s ):
     global html_esc_re
-    return re.sub(html_esc_re, lambda m: htmlspecialchars_replace( m.group() ), str(s))
+    return re.sub(html_esc_re, htmlspecialchars_replace, str(s))
 
 
 class Paginator:
     VERSION = '1.0.0'
-    
-    def __init__( self, totalItems, itemsPerPage, currentPage, urlPattern='', placeholder=None ):
-        self.totalItems = 0
-        self.numPages = 0
-        self.itemsPerPage = 0
-        self.currentPage = 0
-        self.urlPattern = ''
-        self.maxPagesToShow = 10
-        self.placeholder = '(:page)'
-        self.previousText = '&laquo; Previous'
-        self.nextText = 'Next &raquo;'
-        
-        self.totalItems = int(totalItems)
-        self.itemsPerPage = int(itemsPerPage)
-        self.currentPage = int(currentPage)
-        self.urlPattern = str(urlPattern)
-        if placeholder is not None:
-            self.placeholder = str(placeholder)
+
+    def __init__( self, totalItems=0, itemsPerPage=0, currentPage=1 ):
+        self._maxPagesToShow = 10
+        self._placeholder = '(:page)'
+        self._urlPattern = '?page=' + self._placeholder
+        self._previousText = '&laquo; Previous'
+        self._nextText = 'Next &raquo;'
+        self._ellipsis = '...'
+        self._numPages = 0
+
+        self._totalItems = int(totalItems)
+        self._itemsPerPage = int(itemsPerPage)
+        self._currentPage = int(currentPage)
 
         self.computeNumPages()
 
     def computeNumPages( self ):
-        self.numPages = 0 if 0 == self.itemsPerPage else math.ceil(self.totalItems/self.itemsPerPage)
+        self._numPages = 0 if 0 >= self._itemsPerPage or 0 >= self._totalItems else math.ceil(self._totalItems/self._itemsPerPage)
         return self
 
-    def setMaxPagesToShow( self, maxPagesToShow ):
-        if maxPagesToShow < 3:
-            raise ValueError('maxPagesToShow cannot be less than 3.')
-        
-        self.maxPagesToShow = int(maxPagesToShow)
-        return self
+    def numPages( self ):
+        return self._numPages
 
-    def getMaxPagesToShow( self ):
-        return self.maxPagesToShow
+    def totalItems( self, *args ):
+        if len(args):
+            self._totalItems = int(args[0])
+            return self.computeNumPages()
+        else:
+            return self._totalItems
 
-    def setCurrentPage( self, currentPage ):
-        self.currentPage = int(currentPage)
-        return self
+    def itemsPerPage( self, *args ):
+        if len(args):
+            self._itemsPerPage = int(args[0])
+            return self.computeNumPages()
+        else:
+            return self._itemsPerPage
 
-    def getCurrentPage( self ):
-        return self.currentPage
+    def currentPage( self, *args ):
+        if len(args):
+            self._currentPage = int(args[0])
+            return self
+        else:
+            return self._currentPage
 
-    def setItemsPerPage( self, itemsPerPage ):
-        self.itemsPerPage = int(itemsPerPage)
-        return self.computeNumPages()
+    def maxPagesToShow( self, *args ):
+        if len(args):
+            maxPagesToShow = int(args[0])
+            if maxPagesToShow < 3:
+                raise ValueError('maxPagesToShow cannot be less than 3!')
+            self._maxPagesToShow = maxPagesToShow
+            return self
+        else:
+            return self._maxPagesToShow
 
-    def getItemsPerPage( self ):
-        return self.itemsPerPage
+    def urlPattern( self, *args ):
+        if len(args):
+            self._urlPattern = str(args[0])
+            return self
+        else:
+            return self._urlPattern
 
-    def setTotalItems( self, totalItems ):
-        self.totalItems = int(totalItems)
-        return self.computeNumPages()
+    def placeholder( self, *args ):
+        if len(args):
+            self._placeholder = str(args[0])
+            return self
+        else:
+            return self._placeholder
 
-    def getTotalItems( self ):
-        return self.totalItems
+    def previousText( self, *args ):
+        if len(args):
+            self._previousText = str(args[0])
+            return self
+        else:
+            return self._previousText
 
-    def getNumPages( self, ):
-        return self.numPages
+    def nextText( self, *args ):
+        if len(args):
+            self._nextText = str(args[0])
+            return self
+        else:
+            return self._nextText
 
-    def setUrlPattern( self, urlPattern ):
-        self.urlPattern = str(urlPattern)
-        return self
+    def ellipsis( self, *args ):
+        if len(args):
+            self._ellipsis = str(args[0])
+            return self
+        else:
+            return self._ellipsis
 
-    def getUrlPattern( self, ):
-        return self.urlPattern
+    def pageUrl( self, pageNum ):
+        return self._urlPattern.replace(self._placeholder, str(pageNum))
 
-    def setPlaceholder( self, placeholder ):
-        self.placeholder = str(placeholder)
-        return self
+    def prevPage( self ):
+        return self._currentPage-1 if self._currentPage > 1 else None
 
-    def getPlaceholder( self ):
-        return self.placeholder
+    def nextPage( self ):
+        return self._currentPage+1 if self._currentPage < self._numPages else None
 
-    def getPageUrl( self, pageNum ):
-        return self.urlPattern.replace(self.placeholder, str(pageNum))
+    def prevUrl( self ):
+        return self.pageUrl( self.prevPage( ) ) if self.prevPage( ) else None
 
-    def getNextPage( self ):
-        if self.currentPage < self.numPages:
-            return self.currentPage + 1
+    def nextUrl( self ):
+        return self.pageUrl( self.nextPage( ) ) if self.nextPage( ) else None
 
-        return None
+    def currentPageFirstItem( self ):
+        first = (self._currentPage - 1) * self._itemsPerPage + 1
+        return None if first > self._totalItems else first
 
-    def getPrevPage( self ):
-        if self.currentPage > 1:
-            return self.currentPage - 1
-
-        return None
-
-    def getNextUrl( self ):
-        if not self.getNextPage():
-            return None
-
-        return self.getPageUrl(self.getNextPage())
-
-    def getPrevUrl( self ):
-        if not self.getPrevPage():
-            return None
-
-        return self.getPageUrl(self.getPrevPage())
-
-    def setPreviousText( text ):
-        self.previousText = str(text)
-        return self
-
-    def getPreviousText( self ):
-        return self.previousText
-
-    def setNextText( text ):
-        self.nextText = str(text)
-        return self
-
-    def getNextText( self ):
-        return self.nextText
+    def currentPageLastItem( self ):
+        first = self.currentPageFirstItem()
+        if first is None: return None
+        last = first + self._itemsPerPage - 1
+        return self._totalItems if last > self._totalItems else last
 
     ##
-     # Get an array of paginated page data.
+     # Get a list of paginated page data.
      #
      # Example:
-     # array(
-     #     array ('num' => 1,     'url' => '/example/page/1',  'isCurrent' => false),
-     #     array ('num' => '...', 'url' => NULL,               'isCurrent' => false),
-     #     array ('num' => 3,     'url' => '/example/page/3',  'isCurrent' => false),
-     #     array ('num' => 4,     'url' => '/example/page/4',  'isCurrent' => true ),
-     #     array ('num' => 5,     'url' => '/example/page/5',  'isCurrent' => false),
-     #     array ('num' => '...', 'url' => NULL,               'isCurrent' => false),
-     #     array ('num' => 10,    'url' => '/example/page/10', 'isCurrent' => false),
+     # list(
+     #     dict ('num' : 1,     'url' : '/example/page/1',  'isCurrent' : false),
+     #     dict ('num' : '...', 'url' : NULL,               'isCurrent' : false),
+     #     dict ('num' : 3,     'url' : '/example/page/3',  'isCurrent' : false),
+     #     dict ('num' : 4,     'url' : '/example/page/4',  'isCurrent' : true ),
+     #     dict ('num' : 5,     'url' : '/example/page/5',  'isCurrent' : false),
+     #     dict ('num' : '...', 'url' : NULL,               'isCurrent' : false),
+     #     dict ('num' : 10,    'url' : '/example/page/10', 'isCurrent' : false),
      # )
      #
-     # @return array
+     # @return list
      #
-    def getPages( self ):
+    def pages( self ):
         pages = []
 
-        if self.numPages <= 1:
-            return []
+        if 1 >= self._numPages: return pages
 
-        if self.numPages <= self.maxPagesToShow:
-            for i in range(1, self.numPages+1):
-                pages.append(self.createPage(i, i == self.currentPage))
+        if self._numPages <= self._maxPagesToShow:
+
+            for i in range(1, self._numPages+1):
+                pages.append(self.createPage(i, i==self._currentPage))
+
         else:
 
             # Determine the sliding range, centered around the current page.
-            numAdjacents = math.floor((self.maxPagesToShow - 3) / 2)
+            numAdjacents = math.floor((self._maxPagesToShow - 3) / 2)
 
-            if self.currentPage + numAdjacents > self.numPages:
-                slidingStart = self.numPages - self.maxPagesToShow + 2
+            if self._currentPage + numAdjacents > self._numPages:
+                slidingStart = self._numPages - self._maxPagesToShow + 2
             else:
-                slidingStart = self.currentPage - numAdjacents
-            
+                slidingStart = self._currentPage - numAdjacents
+
             if slidingStart < 2: slidingStart = 2
 
-            slidingEnd = slidingStart + self.maxPagesToShow - 3
-            if slidingEnd >= self.numPages: slidingEnd = self.numPages - 1
+            slidingEnd = slidingStart + self._maxPagesToShow - 3
+            if slidingEnd >= self._numPages: slidingEnd = self._numPages - 1
 
             # Build the list of pages.
-            pages.append(self.createPage(1, self.currentPage == 1))
-            if slidingStart > 2:
-                pages.append(self.createPage(None))
-            
+
+            # first
+            pages.append(self.createPage(1, 1==self._currentPage))
+
+            # ellipsis ..
+            if slidingStart > 2: pages.append(self.createPage(None))
+
+            # shown pages
             for i in range(slidingStart,slidingEnd+1):
-                pages.append(self.createPage(i, i == self.currentPage))
-            
-            if slidingEnd < self.numPages - 1:
-                pages.append(self.createPage(None))
-            
-            pages.append(self.createPage(self.numPages, self.currentPage == self.numPages))
+                pages.append(self.createPage(i, i==self._currentPage))
+
+            # ellipsis ..
+            if slidingEnd < self._numPages - 1: pages.append(self.createPage(None))
+
+            # last
+            pages.append(self.createPage(self._numPages, self._numPages==self._currentPage))
 
 
         return pages
 
     def createPage( self, pageNum, isCurrent=False ):
         return {
-            'num' : '...',
+            'num' : self._ellipsis,
             'url' : None,
             'isCurrent' : False
         } if pageNum is None else {
             'num' : pageNum,
-            'url' : self.getPageUrl(pageNum),
+            'url' : self.pageUrl(pageNum),
             'isCurrent' : bool(isCurrent)
         }
 
-    def getCurrentPageFirstItem( self ):
-        first = (self.currentPage - 1) * self.itemsPerPage + 1
-
-        if first > self.totalItems:
-            return None
-
-        return first
-
-    def getCurrentPageLastItem( self ):
-        first = self.getCurrentPageFirstItem();
-        if first is None:
-            return None
-
-        last = first + self.itemsPerPage - 1
-        if last > self.totalItems:
-            return self.totalItems
-
-        return last
-
     def renderer( self ):
-        if self.numPages <= 1:
-            return ''
+        if 1 >= self._numPages: return ''
 
-        html = '<ul class="pagination">';
-        if self.getPrevUrl():
-            html += '<li class="page-previous"><a href="' + htmlspecialchars(self.getPrevUrl()) + '">'+ self.previousText +'</a></li>';
+        # possibly should be wrapped around <nav></nav> element when used
+        html = '<ul class="pagination">'
 
-        for page in self.getPages():
+        # previous link
+        if self.prevUrl( ):
+            html += '<li class="page-previous"><a href="' + htmlspecialchars(self.prevUrl()) + '">'+ self._previousText +'</a></li>';
+
+        # shown pages by number including first and last
+        for page in self.pages():
             if page['url']:
-                html += '<li class="page-item' + (' first' if 1==page['num'] else '') + (' last' if self.numPages==page['num'] else '') + (' active' if page['isCurrent'] else '') + '"><a href="' + htmlspecialchars(page['url']) + '">' + htmlspecialchars(page['num']) + '</a></li>'
+                # actual page with page number
+                html += '<li class="page-item' + (' first' if 1==page['num'] else '') + (' last' if self._numPages==page['num'] else '') + (' active' if page['isCurrent'] else '') + '"><a href="' + htmlspecialchars(page['url']) + '">' + str(page['num']) + '</a></li>'
             else:
-                html += '<li class="page-item disabled"><span>' + htmlspecialchars(page['num']) + '</span></li>'
+                # ellipsis, more
+                html += '<li class="page-item disabled"><span>' + str(page['num']) + '</span></li>'
 
-        if self.getNextUrl():
-            html += '<li class="page-next"><a href="' + htmlspecialchars(self.getNextUrl()) + '">'+ self.nextText +'</a></li>';
+        # next link
+        if self.nextUrl():
+            html += '<li class="page-next"><a href="' + htmlspecialchars(self.nextUrl()) + '">'+ self._nextText +'</a></li>';
+
         html += '</ul>'
 
         return html
