@@ -45,6 +45,7 @@ function Paginator( totalItems, itemsPerPage, currentPage )
     self._previousText = '&laquo; Previous';
     self._nextText = 'Next &raquo;';
     self._ellipsis = '...';
+    self._view = 'list';
     self._numPages = 0;
 
     self._totalItems = parseInt(totalItems||0);
@@ -67,6 +68,7 @@ Paginator.prototype = {
     _previousText: null,
     _nextText: null,
     _ellipsis: null,
+    _view: null,
 
     computeNumPages: function( ) {
         var self = this;
@@ -197,6 +199,31 @@ Paginator.prototype = {
         }
     },
 
+    view: function( view ) {
+        var self = this;
+        if ( arguments.length )
+        {
+            view = String(view).toLowerCase();
+            switch(view)
+            {
+                case 'mobile':
+                case 'selectbox':
+                case 'select':
+                    view = 'selectbox';
+                    break;
+                default:
+                    view = 'list';
+                    break;
+            }
+            self._view = view;
+            return self;
+        }
+        else
+        {
+            return self._view;
+        }
+    },
+
     pageUrl: function( pageNum ){
         return this._urlPattern.split(this._placeholder).join(String(pageNum));
     },
@@ -310,47 +337,84 @@ Paginator.prototype = {
         };
     },
 
-    renderer: function( ) {
+    render: function( ) {
         var self = this, html, pages, i, l, page;
 
         if ( 1 >= self._numPages ) return '';
 
-        // possibly should be wrapped around <nav></nav> element when used
-        html = '<ul class="pagination">';
-
-        if ( self.prevUrl( ) )
+        if ( 'selectbox' === self._view )
         {
-            html += '<li class="page-previous"><a href="' + htmlspecialchars(self.prevUrl( )) + '">'+ self._previousText +'</a></li>';
-        }
+            html = '<div class="pagination">';
 
-        for (pages=self.pages(),i=0,l=pages.length; i<l; i++)
-        {
-            page = pages[i];
-            if ( page.url )
+            // previous link
+            if ( self.prevUrl( ) )
             {
-                // actual page with page number
-                html += '<li class="page-item' + (1==page.num ? ' first' : '') + (self._numPages==page.num ? ' last' : '') + (page.isCurrent ? ' active' : '') + '"><a href="' + htmlspecialchars(page.url) + '">' + String(page.num) + '</a></li>';
+                html += '<span class="page-previous"><a href="' + htmlspecialchars(self.prevUrl( )) + '">'+ self._previousText +'</a></span>';
             }
-            else
+
+            html += '<select class="page-select">';
+            // shown pages by number including first and last
+            for (pages=self.pages(),i=0,l=pages.length; i<l; i++)
             {
-                // ellipsis, more
-                html += '<li class="page-item disabled"><span>' + String(page.num) + '</span></li>';
+                page = pages[i];
+                if ( page.url )
+                {
+                    // actual page with page number
+                    html += '<option value="' + htmlspecialchars(page.url) + '"' + (page.isCurrent ? ' selected' : '') + '>' + String(page.num) + '</option>';
+                }
+                else
+                {
+                    // ellipsis, more
+                    html += '<option disabled>' + String(page.num) + '</option>';
+                }
             }
-        }
+            html += '</select>';
 
-        // next link
-        if ( self.nextUrl( ) )
+            // next link
+            if ( self.nextUrl( ) )
+            {
+                html += '<span class="page-next"><a href="' + htmlspecialchars(self.nextUrl( )) + '">'+ self._nextText +'</a></span>';
+            }
+
+            html += '</div>';
+        }
+        else
         {
-            html += '<li class="page-next"><a href="' + htmlspecialchars(self.nextUrl( )) + '">'+ self._nextText +'</a></li>';
-        }
+            // possibly should be wrapped around <nav></nav> element when used
+            html = '<ul class="pagination">';
 
-        html += '</ul>';
+            // previous link
+            if ( self.prevUrl( ) )
+            {
+                html += '<li class="page-previous"><a href="' + htmlspecialchars(self.prevUrl( )) + '">'+ self._previousText +'</a></li>';
+            }
+
+            // shown pages by number including first and last
+            for (pages=self.pages(),i=0,l=pages.length; i<l; i++)
+            {
+                page = pages[i];
+                if ( page.url )
+                {
+                    // actual page with page number
+                    html += '<li class="page-item' + (1==page.num ? ' first' : '') + (self._numPages==page.num ? ' last' : '') + (page.isCurrent ? ' active' : '') + '"><a href="' + htmlspecialchars(page.url) + '">' + String(page.num) + '</a></li>';
+                }
+                else
+                {
+                    // ellipsis, more
+                    html += '<li class="page-item disabled"><span>' + String(page.num) + '</span></li>';
+                }
+            }
+
+            // next link
+            if ( self.nextUrl( ) )
+            {
+                html += '<li class="page-next"><a href="' + htmlspecialchars(self.nextUrl( )) + '">'+ self._nextText +'</a></li>';
+            }
+
+            html += '</ul>';
+        }
 
         return html;
-    },
-
-    render: function( renderer ) {
-        return "function" === typeof renderer ? renderer(this) : this.renderer();
     },
 
     toString: function( ) {

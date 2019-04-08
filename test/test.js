@@ -24,3 +24,9 @@ echo(p1);
 echo(p2);
 
 echo(p3);
+
+echo(p1.view('mobile'));
+
+echo(p2.view('mobile'));
+
+echo(p3.view('mobile'));

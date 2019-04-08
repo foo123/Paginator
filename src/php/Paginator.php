@@ -23,6 +23,7 @@ class Paginator
     protected $_previousText;
     protected $_nextText;
     protected $_ellipsis;
+    protected $_view;
 
     public function __construct( $totalItems=0, $itemsPerPage=0, $currentPage=1 )
     {
@@ -32,6 +33,7 @@ class Paginator
         $this->_previousText = '&laquo; Previous';
         $this->_nextText = 'Next &raquo;';
         $this->_ellipsis = '...';
+        $this->_view = 'list';
 
         $this->_totalItems = (int)$totalItems;
         $this->_itemsPerPage = (int)$itemsPerPage;
@@ -170,6 +172,31 @@ class Paginator
         }
     }
 
+    public function view( $view=null )
+    {
+        if ( func_num_args() )
+        {
+            $view = strtolower((string)$view);
+            switch($view)
+            {
+                case 'mobile':
+                case 'selectbox':
+                case 'select':
+                    $view = 'selectbox';
+                    break;
+                default:
+                    $view = 'list';
+                    break;
+            }
+            $this->_view = $view;
+            return $this;
+        }
+        else
+        {
+            return $this->_view;
+        }
+    }
+
     public function pageUrl( $pageNum )
     {
         return str_replace($this->_placeholder, (string)$pageNum, $this->_urlPattern);
@@ -290,48 +317,81 @@ class Paginator
         );
     }
 
-    protected function renderer( )
+    public function render( )
     {
         if ( 1 >= $this->_numPages ) return '';
 
-        // possibly should be wrapped around <nav></nav> element when used
-        $html = '<ul class="pagination">';
-
-        // previous link
-        if ( $this->prevUrl( ) )
+        if ( 'selectbox' === $this->_view )
         {
-            $html .= '<li class="page-previous"><a href="' . htmlspecialchars($this->prevUrl( ), ENT_COMPAT) . '">'. $this->_previousText .'</a></li>';
-        }
+            $html = '<div class="pagination">';
 
-        // shown pages by number including first and last
-        foreach($this->pages( ) as $page)
-        {
-            if ( $page->url )
+            // previous link
+            if ( $this->prevUrl( ) )
             {
-                // actual page with page number
-                $html .= '<li class="page-item' . (1==$page->num ? ' first' : '') . ($this->_numPages==$page->num ? ' last' : '') . ($page->isCurrent ? ' active' : '') . '"><a href="' . htmlspecialchars($page->url, ENT_COMPAT) . '">' . (string)$page->num . '</a></li>';
+                $html .= '<span class="page-previous"><a href="' . htmlspecialchars($this->prevUrl( ), ENT_COMPAT) . '">'. $this->_previousText .'</a></span>';
             }
-            else
+
+            $html .= '<select class="page-select">';
+            // shown pages by number including first and last
+            foreach($this->pages( ) as $page)
             {
-                // ellipsis, more
-                $html .= '<li class="page-item disabled"><span>' . (string)$page->num . '</span></li>';
+                if ( $page->url )
+                {
+                    // actual page with page number
+                    $html .= '<option value="' . htmlspecialchars($page->url, ENT_COMPAT) . '"' . ($page->isCurrent ? ' selected' : '') . '>' . (string)$page->num . '</option>';
+                }
+                else
+                {
+                    // ellipsis, more
+                    $html .= '<option disabled>' . (string)$page->num . '</option>';
+                }
             }
-        }
+            $html .= '</select>';
 
-        // next link
-        if ( $this->nextUrl( ) )
+            // next link
+            if ( $this->nextUrl( ) )
+            {
+                $html .= '<span class="page-next"><a href="' . htmlspecialchars($this->nextUrl( ), ENT_COMPAT) . '">'. $this->_nextText .'</a></span>';
+            }
+
+            $html .= '</div>';
+        }
+        else
         {
-            $html .= '<li class="page-next"><a href="' . htmlspecialchars($this->nextUrl( ), ENT_COMPAT) . '">'. $this->_nextText .'</a></li>';
-        }
+            // possibly should be wrapped around <nav></nav> element when used
+            $html = '<ul class="pagination">';
 
-        $html .= '</ul>';
+            // previous link
+            if ( $this->prevUrl( ) )
+            {
+                $html .= '<li class="page-previous"><a href="' . htmlspecialchars($this->prevUrl( ), ENT_COMPAT) . '">'. $this->_previousText .'</a></li>';
+            }
+
+            // shown pages by number including first and last
+            foreach($this->pages( ) as $page)
+            {
+                if ( $page->url )
+                {
+                    // actual page with page number
+                    $html .= '<li class="page-item' . (1==$page->num ? ' first' : '') . ($this->_numPages==$page->num ? ' last' : '') . ($page->isCurrent ? ' active' : '') . '"><a href="' . htmlspecialchars($page->url, ENT_COMPAT) . '">' . (string)$page->num . '</a></li>';
+                }
+                else
+                {
+                    // ellipsis, more
+                    $html .= '<li class="page-item disabled"><span>' . (string)$page->num . '</span></li>';
+                }
+            }
+
+            // next link
+            if ( $this->nextUrl( ) )
+            {
+                $html .= '<li class="page-next"><a href="' . htmlspecialchars($this->nextUrl( ), ENT_COMPAT) . '">'. $this->_nextText .'</a></li>';
+            }
+
+            $html .= '</ul>';
+        }
 
         return $html;
-    }
-
-    public function render( $renderer=null )
-    {
-        return is_callable($renderer) ? call_user_func($renderer, $this) : $this->renderer( );
     }
 
     public function __toString( )

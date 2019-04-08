@@ -33,6 +33,7 @@ class Paginator:
         self._previousText = '&laquo; Previous'
         self._nextText = 'Next &raquo;'
         self._ellipsis = '...'
+        self._view = 'list'
         self._numPages = 0
 
         self._totalItems = int(totalItems)
@@ -113,6 +114,18 @@ class Paginator:
             return self
         else:
             return self._ellipsis
+
+    def view( self, *args ):
+        if len(args):
+            view = str(args[0]).lower()
+            if 'mobile' == view: view = 'selectbox'
+            elif 'selectbox' == view: view = 'selectbox'
+            elif 'select' == view: view = 'selectbox'
+            else: view = 'list'
+            self._view = view
+            return self
+        else:
+            return self._view
 
     def pageUrl( self, pageNum ):
         return self._urlPattern.replace(self._placeholder, str(pageNum))
@@ -212,35 +225,58 @@ class Paginator:
             'isCurrent' : bool(isCurrent)
         }
 
-    def renderer( self ):
+    def render( self ):
         if 1 >= self._numPages: return ''
 
-        # possibly should be wrapped around <nav></nav> element when used
-        html = '<ul class="pagination">'
+        if 'selectbox' == self._view:
+            html = '<div class="pagination">'
 
-        # previous link
-        if self.prevUrl( ):
-            html += '<li class="page-previous"><a href="' + htmlspecialchars(self.prevUrl()) + '">'+ self._previousText +'</a></li>';
+            # previous link
+            if self.prevUrl( ):
+                html += '<span class="page-previous"><a href="' + htmlspecialchars(self.prevUrl()) + '">'+ self._previousText +'</a></span>';
 
-        # shown pages by number including first and last
-        for page in self.pages():
-            if page['url']:
-                # actual page with page number
-                html += '<li class="page-item' + (' first' if 1==page['num'] else '') + (' last' if self._numPages==page['num'] else '') + (' active' if page['isCurrent'] else '') + '"><a href="' + htmlspecialchars(page['url']) + '">' + str(page['num']) + '</a></li>'
-            else:
-                # ellipsis, more
-                html += '<li class="page-item disabled"><span>' + str(page['num']) + '</span></li>'
+            html += '<select class="page-select">'
+            # shown pages by number including first and last
+            for page in self.pages():
+                if page['url']:
+                    # actual page with page number
+                    html += '<option value="' + htmlspecialchars(page['url']) + '"' + (' selected' if page['isCurrent'] else '') + '>' + str(page['num']) + '</option>'
+                else:
+                    # ellipsis, more
+                    html += '<option disabled>' + str(page['num']) + '</option>'
 
-        # next link
-        if self.nextUrl():
-            html += '<li class="page-next"><a href="' + htmlspecialchars(self.nextUrl()) + '">'+ self._nextText +'</a></li>';
+            html += '</select>'
 
-        html += '</ul>'
+            # next link
+            if self.nextUrl():
+                html += '<span class="page-next"><a href="' + htmlspecialchars(self.nextUrl()) + '">'+ self._nextText +'</a></span>';
+
+            html += '</div>'
+
+        else:
+            # possibly should be wrapped around <nav></nav> element when used
+            html = '<ul class="pagination">'
+
+            # previous link
+            if self.prevUrl( ):
+                html += '<li class="page-previous"><a href="' + htmlspecialchars(self.prevUrl()) + '">'+ self._previousText +'</a></li>';
+
+            # shown pages by number including first and last
+            for page in self.pages():
+                if page['url']:
+                    # actual page with page number
+                    html += '<li class="page-item' + (' first' if 1==page['num'] else '') + (' last' if self._numPages==page['num'] else '') + (' active' if page['isCurrent'] else '') + '"><a href="' + htmlspecialchars(page['url']) + '">' + str(page['num']) + '</a></li>'
+                else:
+                    # ellipsis, more
+                    html += '<li class="page-item disabled"><span>' + str(page['num']) + '</span></li>'
+
+            # next link
+            if self.nextUrl():
+                html += '<li class="page-next"><a href="' + htmlspecialchars(self.nextUrl()) + '">'+ self._nextText +'</a></li>';
+
+            html += '</ul>'
 
         return html
-
-    def render( self, renderer=None ):
-        return renderer(self) if callable(renderer) else self.renderer()
 
     def __str__( self ):
         return self.render()

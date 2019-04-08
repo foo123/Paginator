@@ -24,3 +24,9 @@ echo_($p1);
 echo_($p2);
 
 echo_($p3);
+
+echo_($p1->view('mobile'));
+
+echo_($p2->view('mobile'));
+
+echo_($p3->view('mobile'));
